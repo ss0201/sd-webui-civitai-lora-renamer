@@ -46,6 +46,7 @@ def rename_files() -> str:
             new_filename = f"{model_name} - {version}.{extension}"
             if not Path(base_path / new_filename).exists():
                 file.rename(base_path / new_filename)
+                print(f"CivitAI Lora Renamer: {file.name} -> {new_filename}")
 
     return "Done"
 
