@@ -1,0 +1,51 @@
+import json
+
+import gradio as gr
+
+from modules import script_callbacks, shared
+
+INFO_EXTENSION = "civitai.info"
+INVALID_PATH_CHARACTERS = r'<>:"/\|?*'
+
+
+def on_ui_tabs():
+    with gr.Blocks(analytics_enabled=False) as ui_component:
+        rename_button = gr.Button(value="Rename", variant="primary")
+        rename_log_md = gr.Markdown(value="Renaming takes a while, please be patient.")
+
+        rename_button.click(rename_files, inputs=[], outputs=rename_log_md)
+
+        return [(ui_component, "Lora Renamer", "civitai_lora_renamer")]
+
+
+def rename_files() -> str:
+    directory = shared.cmd_opts.lora_dir
+    if not directory.exists():
+        return f"Directory {directory} does not exist"
+
+    for path in directory.rglob(f"*.{INFO_EXTENSION}"):
+        with open(path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        model_name = data.get("model", {}).get("name")
+        version = data.get("name")
+
+        if not model_name or not version:
+            continue
+
+        for char in INVALID_PATH_CHARACTERS:
+            model_name = model_name.replace(char, "")
+            version = version.replace(char, "")
+
+        base_name = path.name[: -len(INFO_EXTENSION) - 1]
+        base_path = path.parent
+
+        for file in base_path.glob(f"{base_name}.*"):
+            extension = file.name[len(base_name) + 1 :]
+            new_filename = f"{model_name} - {version}.{extension}"
+            file.rename(base_path / new_filename)
+
+    return "Done"
+
+
+script_callbacks.on_ui_tabs(on_ui_tabs)
