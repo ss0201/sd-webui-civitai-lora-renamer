@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import gradio as gr
 
@@ -19,7 +20,7 @@ def on_ui_tabs():
 
 
 def rename_files() -> str:
-    directory = shared.cmd_opts.lora_dir
+    directory = Path(shared.cmd_opts.lora_dir)
     if not directory.exists():
         return f"Directory {directory} does not exist"
 
