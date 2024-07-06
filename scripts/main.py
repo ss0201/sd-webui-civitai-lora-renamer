@@ -44,7 +44,8 @@ def rename_files() -> str:
         for file in base_path.glob(f"{base_name}.*"):
             extension = file.name[len(base_name) + 1 :]
             new_filename = f"{model_name} - {version}.{extension}"
-            file.rename(base_path / new_filename)
+            if not Path(base_path / new_filename).exists():
+                file.rename(base_path / new_filename)
 
     return "Done"
 
