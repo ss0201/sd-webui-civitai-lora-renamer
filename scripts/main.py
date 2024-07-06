@@ -39,6 +39,8 @@ def rename_files() -> str:
             )
             continue
 
+        model_name = model_name.strip().replace(" ", "_")
+        version = version.strip().replace(" ", "_")
         for char in INVALID_PATH_CHARACTERS:
             model_name = model_name.replace(char, "")
             version = version.replace(char, "")
@@ -48,7 +50,7 @@ def rename_files() -> str:
 
         for file in base_path.glob(f"{glob.escape(base_name)}.*"):
             extension = file.name[len(base_name) + 1 :]
-            new_filename = f"{model_name} - {version}.{extension}"
+            new_filename = f"{model_name}__{version}.{extension}"
             if file.name == new_filename:
                 continue
             if Path(base_path / new_filename).exists():
