@@ -1,3 +1,4 @@
+import glob
 import json
 from pathlib import Path
 
@@ -32,6 +33,10 @@ def rename_files() -> str:
         version = data.get("name")
 
         if not model_name or not version:
+            print(
+                "CivitAI Lora Renamer: "
+                f'Skipping "{path.name}" as it does not contain model name or version'
+            )
             continue
 
         for char in INVALID_PATH_CHARACTERS:
@@ -41,13 +46,21 @@ def rename_files() -> str:
         base_name = path.name[: -len(INFO_EXTENSION) - 1]
         base_path = path.parent
 
-        for file in base_path.glob(f"{base_name}.*"):
+        for file in base_path.glob(f"{glob.escape(base_name)}.*"):
             extension = file.name[len(base_name) + 1 :]
             new_filename = f"{model_name} - {version}.{extension}"
-            if not Path(base_path / new_filename).exists():
+            if file.name == new_filename:
+                continue
+            if Path(base_path / new_filename).exists():
+                print(
+                    "CivitAI Lora Renamer: "
+                    f'Skipping "{file.name}" as "{new_filename}" already exists'
+                )
+            else:
                 file.rename(base_path / new_filename)
                 print(f"CivitAI Lora Renamer: {file.name} -> {new_filename}")
 
+    print("CivitAI Lora Renamer: Done")
     return "Done"
 
 
