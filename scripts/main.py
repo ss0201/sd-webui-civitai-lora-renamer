@@ -31,6 +31,7 @@ def rename_files() -> str:
 
         model_name = data.get("model", {}).get("name")
         version = data.get("name")
+        id = data.get("id")
 
         if not model_name or not version:
             print(
@@ -39,18 +40,32 @@ def rename_files() -> str:
             )
             continue
 
-        model_name = model_name.strip().replace(" ", "_")
-        version = version.strip().replace(" ", "_")
-        for char in INVALID_PATH_CHARACTERS:
-            model_name = model_name.replace(char, "")
-            version = version.replace(char, "")
-
         base_name = path.name[: -len(INFO_EXTENSION) - 1]
         base_path = path.parent
 
+        civitai_info_path = base_path / get_new_filename(
+            model_name, version, INFO_EXTENSION
+        )
+        use_id = False
+
+        if Path(civitai_info_path).exists() and civitai_info_path != path:
+            with open(civitai_info_path, "r", encoding="utf-8") as file:
+                data = json.load(file)
+            if data.get("id") == id:
+                print(
+                    "CivitAI Lora Renamer: "
+                    f'Skipping "{path.name}" as "{civitai_info_path} (id: {id})" '
+                    "already exists"
+                )
+                continue
+            else:
+                use_id = True
+
         for file in base_path.glob(f"{glob.escape(base_name)}.*"):
             extension = file.name[len(base_name) + 1 :]
-            new_filename = f"{model_name}__{version}.{extension}"
+            new_filename = get_new_filename(
+                model_name, version, extension, id if use_id else ""
+            )
             if file.name == new_filename:
                 continue
             if Path(base_path / new_filename).exists():
@@ -64,6 +79,18 @@ def rename_files() -> str:
 
     print("CivitAI Lora Renamer: Done")
     return "Done"
+
+
+def get_new_filename(
+    model_name: str, version: str, extension: str, id: str = ""
+) -> str:
+    model_name = model_name.strip().replace(" ", "_")
+    version = version.strip().replace(" ", "_")
+    for char in INVALID_PATH_CHARACTERS:
+        model_name = model_name.replace(char, "")
+        version = version.replace(char, "")
+
+    return f"{model_name}{f'_{id}' if id else ''}__{version}.{extension}"
 
 
 script_callbacks.on_ui_tabs(on_ui_tabs)
