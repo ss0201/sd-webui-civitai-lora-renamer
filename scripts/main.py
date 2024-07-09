@@ -22,8 +22,6 @@ def on_ui_tabs():
 
 
 def on_ui_settings():
-    import gradio as gr
-
     section = ("civitai_lora_renamer", "CivitAI Lora Renamer")
 
     shared.opts.add_option(
@@ -64,7 +62,7 @@ def rename_files() -> str:
 
         if not model_name or not version:
             print(
-                "CivitAI Lora Renamer: "
+                f"CivitAI Lora Renamer: "
                 f'Skipping "{path.name}" as it does not contain model name or version'
             )
             continue
@@ -77,22 +75,12 @@ def rename_files() -> str:
         )
         use_id = False
 
-        if Path(civitai_info_path).exists() and civitai_info_path != path:
+        if civitai_info_path.exists() and civitai_info_path != path:
             with open(civitai_info_path, "r", encoding="utf-8") as file:
-                data = json.load(file)
-            if data.get("id") == id:
+                existing_data = json.load(file)
+            if existing_data.get("id") == id:
                 if shared.opts.clr_delete_duplicate_files:
-                    files_to_delete = base_path.glob(f"{glob.escape(base_name)}.*")
-                    for file in files_to_delete:
-                        if shared.opts.clr_use_send2trash:
-                            send2trash(str(file))
-                        else:
-                            file.unlink()
-                        print(
-                            f"CivitAI Lora Renamer: "
-                            f"Deleted {file.name} as {civitai_info_path} "
-                            f"(id: {id}) already exists"
-                        )
+                    delete_duplicate_files(base_path, base_name, id, civitai_info_path)
                 else:
                     print(
                         f"CivitAI Lora Renamer: "
@@ -103,36 +91,67 @@ def rename_files() -> str:
             else:
                 use_id = True
 
-        for file in base_path.glob(f"{glob.escape(base_name)}.*"):
-            extension = file.name[len(base_name) + 1 :]
-            new_filename = get_new_filename(
-                model_name, version, extension, id if use_id else ""
-            )
-            if file.name == new_filename:
-                continue
-            if Path(base_path / new_filename).exists():
-                print(
-                    "CivitAI Lora Renamer: "
-                    f'Skipping "{file.name}" as "{new_filename}" already exists'
-                )
-            else:
-                file.rename(base_path / new_filename)
-                print(f"CivitAI Lora Renamer: {file.name} -> {new_filename}")
+        rename_files_in_directory(base_path, base_name, model_name, version, use_id, id)
 
     print("CivitAI Lora Renamer: Done")
     return "Done"
 
 
+def delete_duplicate_files(
+    base_path: Path, base_name: str, id: str, civitai_info_path: Path
+):
+    for file in base_path.glob(f"{glob.escape(base_name)}.*"):
+        if shared.opts.clr_use_send2trash:
+            send2trash(str(file))
+        else:
+            file.unlink()
+        print(
+            f"CivitAI Lora Renamer: "
+            f'Deleted "{file.name}" as "{civitai_info_path}" '
+            f"(id: {id}) already exists"
+        )
+
+
+def rename_files_in_directory(
+    base_path: Path,
+    base_name: str,
+    model_name: str,
+    version: str,
+    use_id: bool,
+    id: str,
+):
+    for file in base_path.glob(f"{glob.escape(base_name)}.*"):
+        extension = file.name[len(base_name) + 1 :]
+        new_filename = get_new_filename(
+            model_name, version, extension, id if use_id else ""
+        )
+        new_filepath = base_path / new_filename
+        if file.name == new_filename:
+            continue
+        if new_filepath.exists():
+            print(
+                f"CivitAI Lora Renamer: "
+                f'Skipping "{file.name}" as "{new_filename}" already exists'
+            )
+        else:
+            file.rename(new_filepath)
+            print(f"CivitAI Lora Renamer: {file.name} -> {new_filename}")
+
+
 def get_new_filename(
     model_name: str, version: str, extension: str, id: str = ""
 ) -> str:
-    model_name = model_name.strip().replace(" ", "_")
-    version = version.strip().replace(" ", "_")
-    for char in INVALID_PATH_CHARACTERS:
-        model_name = model_name.replace(char, "")
-        version = version.replace(char, "")
+    sanitized_model_name = sanitize_string(model_name)
+    sanitized_version = sanitize_string(version)
+    id_part = f"_{id}" if id else ""
+    return f"{sanitized_model_name}{id_part}__{sanitized_version}.{extension}"
 
-    return f"{model_name}{f'_{id}' if id else ''}__{version}.{extension}"
+
+def sanitize_string(value: str) -> str:
+    sanitized = value.strip().replace(" ", "_")
+    for char in INVALID_PATH_CHARACTERS:
+        sanitized = sanitized.replace(char, "")
+    return sanitized
 
 
 script_callbacks.on_ui_tabs(on_ui_tabs)
