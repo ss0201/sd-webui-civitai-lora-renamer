@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 import gradio as gr
+from send2trash import send2trash
 
 from modules import script_callbacks, shared
 
@@ -18,6 +19,34 @@ def on_ui_tabs():
         rename_button.click(rename_files, inputs=[], outputs=rename_log_md)
 
         return [(ui_component, "Lora Renamer", "civitai_lora_renamer")]
+
+
+def on_ui_settings():
+    import gradio as gr
+
+    section = ("civitai_lora_renamer", "CivitAI Lora Renamer")
+
+    shared.opts.add_option(
+        "clr_delete_duplicate_files",
+        shared.OptionInfo(
+            False,
+            "Delete duplicate files",
+            gr.Checkbox,
+            {"interactive": True},
+            section=section,
+        ).info("Delete duplicate files with the same model id."),
+    )
+
+    shared.opts.add_option(
+        "clr_use_send2trash",
+        shared.OptionInfo(
+            True,
+            "Use send2trash",
+            gr.Checkbox,
+            {"interactive": True},
+            section=section,
+        ).info("Use send2trash instead of permanently deleting files."),
+    )
 
 
 def rename_files() -> str:
@@ -52,11 +81,24 @@ def rename_files() -> str:
             with open(civitai_info_path, "r", encoding="utf-8") as file:
                 data = json.load(file)
             if data.get("id") == id:
-                print(
-                    "CivitAI Lora Renamer: "
-                    f'Skipping "{path.name}" as "{civitai_info_path} (id: {id})" '
-                    "already exists"
-                )
+                if shared.opts.clr_delete_duplicate_files:
+                    files_to_delete = base_path.glob(f"{glob.escape(base_name)}.*")
+                    for file in files_to_delete:
+                        if shared.opts.clr_use_send2trash:
+                            send2trash(str(file))
+                        else:
+                            file.unlink()
+                        print(
+                            f"CivitAI Lora Renamer: "
+                            f"Deleted {file.name} as {civitai_info_path} "
+                            f"(id: {id}) already exists"
+                        )
+                else:
+                    print(
+                        f"CivitAI Lora Renamer: "
+                        f'Skipping "{path.name}" as "{civitai_info_path} '
+                        f"(id: {id}) already exists"
+                    )
                 continue
             else:
                 use_id = True
@@ -94,3 +136,4 @@ def get_new_filename(
 
 
 script_callbacks.on_ui_tabs(on_ui_tabs)
+script_callbacks.on_ui_settings(on_ui_settings)
