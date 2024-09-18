@@ -16,7 +16,7 @@ def on_ui_tabs():
         rename_button = gr.Button(value="Rename", variant="primary")
         rename_log_md = gr.Markdown(value="Renaming takes a while, please be patient.")
 
-        rename_button.click(rename_files, inputs=[], outputs=rename_log_md)
+        rename_button.click(scan_and_rename_files, inputs=[], outputs=rename_log_md)
 
         return [(ui_component, "Lora Renamer", "civitai_lora_renamer")]
 
@@ -47,7 +47,7 @@ def on_ui_settings():
     )
 
 
-def rename_files() -> str:
+def scan_and_rename_files() -> str:
     directory = Path(shared.cmd_opts.lora_dir)
     if not directory.exists():
         return f"Directory {directory} does not exist"
@@ -94,7 +94,7 @@ def rename_files() -> str:
             else:
                 use_id = True
 
-        rename_files_in_directory(base_path, base_name, model_name, version, use_id, id)
+        rename_relevant_files(base_path, base_name, model_name, version, use_id, id)
 
     print("CivitAI Lora Renamer: Done")
     return "Done"
@@ -115,7 +115,7 @@ def delete_duplicate_files(
         )
 
 
-def rename_files_in_directory(
+def rename_relevant_files(
     base_path: Path,
     base_name: str,
     model_name: str,
