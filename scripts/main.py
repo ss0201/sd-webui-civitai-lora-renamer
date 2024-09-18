@@ -75,7 +75,10 @@ def rename_files() -> str:
         )
         use_id = False
 
-        if civitai_info_path.exists() and civitai_info_path != path:
+        if civitai_info_path == path:
+            continue
+
+        if civitai_info_path.exists():
             with open(civitai_info_path, "r", encoding="utf-8") as file:
                 existing_data = json.load(file)
             if existing_data.get("id") == id:
