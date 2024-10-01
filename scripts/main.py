@@ -8,7 +8,7 @@ from send2trash import send2trash
 from modules import script_callbacks, shared
 
 INFO_EXTENSION = "civitai.info"
-INVALID_PATH_CHARACTERS = r'<>:"/\|?*'
+INVALID_PATH_CHARACTERS = r'<>:"/\|?*& '
 
 
 def on_ui_tabs():
@@ -151,9 +151,9 @@ def get_new_filename(
 
 
 def sanitize_string(value: str) -> str:
-    sanitized = value.strip().replace(" ", "_")
+    sanitized = value.strip()
     for char in INVALID_PATH_CHARACTERS:
-        sanitized = sanitized.replace(char, "")
+        sanitized = sanitized.replace(char, "_")
     return sanitized
 
 
